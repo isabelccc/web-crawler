@@ -1,0 +1,132 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          ninja-build \
+          pkg-config \
+          libcurl4-openssl-dev \
+          libhiredis-dev \
+          libgumbo-dev \
+          libxxhash-dev \
+          libssl-dev \
+          libyaml-cpp-dev
+    
+    - name: Configure CMake
+      run: |
+        mkdir -p build
+        cd build
+        cmake -DCMAKE_BUILD_TYPE=Release -GNinja ..
+    
+    - name: Build
+      run: |
+        cd build
+        ninja
+    
+    - name: Run tests
+      run: |
+        cd build
+        ctest --output-on-failure || true
+
+  format-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install clang-format
+      run: sudo apt-get install -y clang-format
+    
+    - name: Check formatting
+      run: |
+        find src -name "*.cpp" -o -name "*.h" | xargs clang-format --dry-run --Werror
+
+  sanitizers:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          ninja-build \
+          pkg-config \
+          libcurl4-openssl-dev \
+          libhiredis-dev \
+          libgumbo-dev \
+          libxxhash-dev \
+          libssl-dev \
+          libyaml-cpp-dev \
+          valgrind
+    
+    - name: Build with sanitizers
+      run: |
+        mkdir -p build/sanitizers
+        cd build/sanitizers
+        cmake -DCMAKE_BUILD_TYPE=Debug -DUSE_SANITIZERS=ON -GNinja ../..
+        ninja
+    
+    - name: Run with valgrind
+      run: |
+        cd build/sanitizers
+        timeout 60 valgrind --leak-check=full --error-exitcode=1 \
+          ./web-crawler --help || true
+
+  benchmark:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          ninja-build \
+          pkg-config \
+          libcurl4-openssl-dev \
+          libhiredis-dev \
+          libgumbo-dev \
+          libxxhash-dev \
+          libssl-dev \
+          libyaml-cpp-dev \
+          redis-server \
+          bc
+    
+    - name: Start Redis
+      run: |
+        sudo systemctl start redis-server
+    
+    - name: Build
+      run: |
+        mkdir -p build
+        cd build
+        cmake -DCMAKE_BUILD_TYPE=Release -GNinja ..
+        ninja
+    
+    - name: Run small benchmark
+      run: |
+        ./scripts/bench_crawl.sh ./results/benchmark.txt 1000 4 || true

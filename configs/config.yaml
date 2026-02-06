@@ -1,0 +1,79 @@
+# Web Crawler Configuration
+
+# Scheduler
+scheduler:
+  worker_threads: 8
+  queue_size: 10000
+  max_retries: 3
+  retry_backoff_ms: 1000
+  backpressure_strategy: "block"  # block | drop
+
+# Fetcher
+fetcher:
+  connect_timeout_ms: 5000
+  read_timeout_ms: 10000
+  max_redirects: 5
+  user_agent: "WebCrawler/1.0"
+  follow_robots_txt: false
+
+# Rate Limiting
+rate_limit:
+  enabled: true
+  per_domain:
+    default: 10  # requests per second
+    "example.com": 5
+    "github.com": 2
+
+# Deduplication
+dedup:
+  url_canonicalize: true
+  content_hash_algorithm: "xxhash"  # xxhash | sha256
+  redis_ttl_seconds: 86400  # 24 hours
+
+# Indexer
+indexer:
+  segment_size_mb: 100
+  merge_threshold: 10
+  ranking_algorithm: "bm25"  # tfidf | bm25
+  max_docs_per_segment: 100000
+
+# Storage
+storage:
+  data_dir: "./data"
+  index_dir: "./data/index"
+  checkpoint_interval_seconds: 300
+
+# Redis
+redis:
+  host: "localhost"
+  port: 6379
+  db: 0
+  password: ""
+  connection_pool_size: 10
+  timeout_ms: 1000
+  fallback_to_local: true  # Use local hashset if Redis down
+
+# API Server
+api:
+  host: "0.0.0.0"
+  port: 8080
+  threads: 4
+  max_results: 1000
+  default_topk: 10
+
+# Observability
+observability:
+  metrics:
+    enabled: true
+    port: 9090
+    endpoint: "/metrics"
+  logging:
+    level: "info"  # debug | info | warn | error
+    format: "json"  # json | text
+    output: "stdout"  # stdout | file
+    file_path: "./logs/web-crawler.log"
+
+# Memory Management
+memory:
+  max_memory_mb: 2048
+  flush_threshold_percent: 80
