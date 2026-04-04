@@ -13,8 +13,26 @@ This project demonstrates **production-level engineering** across four key areas
 
 ---
 
+<a id="technical-challenges"></a>
+
+## 技术难点 · Technical challenges
+
+These are the main hard problems this codebase is built around (demo readers: start here).
+
+| Area | What makes it hard | How this repo approaches it |
+|------|--------------------|------------------------------|
+| **Crawl at scale** | Fair scheduling, thread safety, and backpressure across millions of URLs | Priority queue + worker pool under `std::mutex`, configurable workers, bounded work |
+| **Index size & memory** | Inverted + forward structures blow RAM without a flush strategy | Segment-style flush thresholds, batch-friendly indexing path |
+| **Search under write load** | Single lock turns reads/writes into a convoy | `std::shared_mutex` pattern: concurrent reads, exclusive writes |
+| **Production incidents** | Leaks, hotspots, deadlocks under K8s load | RAII for libcurl, `perf`/`valgrind`-style workflows, consistent lock ordering / atomics for stats |
+| **API tail latency** | Disk hits and repeated work on hot queries | Cache-aside (Redis), forward index on the hot path, pooling + pipelining |
+| **Dedup & freshness** | Duplicate URLs/content and stale metadata | Redis key namespaces, TTLs, `SETNX` for first-seen, local fallback when Redis is down |
+
+---
+
 ## 📋 Table of Contents
 
+- [技术难点 · Technical challenges](#technical-challenges)
 - [1. Distributed Architecture & 10M+ SKU Support](#1-distributed-architecture--10m-sku-support)
 - [2. Kubernetes Debugging & Performance Optimization](#2-kubernetes-debugging--performance-optimization)
 - [3. RESTful API Refactoring & Latency Reduction](#3-restful-api-refactoring--latency-reduction)
@@ -119,11 +137,11 @@ private:
 };
 ```
 
-**Interview Talking Points**:
-- **Thread Safety**: Used `std::mutex` to protect shared priority queue
-- **Scalability**: Configurable worker threads (8-16 optimal for 10M+ SKUs)
-- **Backpressure**: Queue size limits prevent memory overflow
-- **Priority Scheduling**: Important URLs processed first
+**Technical deep dive**:
+- **Thread safety**: `std::mutex` protects the shared priority queue across workers
+- **Scalability**: Worker count is configurable (typical 8–16 for very large URL sets)
+- **Backpressure**: Queue bounds limit memory growth under spikes
+- **Scheduling**: Priority field lets important URLs run ahead of the long tail
 
 ### Indexing for 10M+ Documents
 
@@ -999,14 +1017,9 @@ std::priority_queue<CrawlTask> task_queue_;
 
 ---
 
-## 📚 Additional Resources
+## 📚 Additional resources
 
-- [Interview Preparation Guide](docs/INTERVIEW_GUIDE.md) - **Key talking points and Q&A for interviews**
-- [Detailed Code Examples](docs/CODE_EXAMPLES.md) - **Complete implementation details with explanations**
-- [Architecture Documentation](docs/ARCHITECTURE.md) - Detailed system design
-- [Profiling Guide](docs/PROFILING.md) - gdb, valgrind, perf tutorials
-- [Benchmark Results](docs/RESULTS.md) - Performance metrics
-- [Quick Start Guide](docs/QUICKSTART.md) - Setup instructions
+Design notes and benchmarks may live in a local `docs/` directory on your machine; that folder is **not** part of the default public tree (see `.gitignore`) so the demo stays focused on code and this README.
 
 ---
 

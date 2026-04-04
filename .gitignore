@@ -24,4 +24,10 @@ __pycache__/
 *.pyc
 .env
 venv/
-docs/
+
+# Local documentation (design notes, interview prep, large Q&A). Kept out of the public demo clone.
+/docs/
+
+# Interview / prep-only files (redundant while /docs/ is ignored; keeps them out if docs/ is ever tracked)
+docs/COMPLETE_INTERVIEW_QA.md
+docs/INTERVIEW_GUIDE.md
